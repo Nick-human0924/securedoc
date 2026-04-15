@@ -4,67 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>隐私说明 - SecureDoc</title>
-    <meta name="description" content="SecureDoc 隐私说明 - 本地处理，零云端，零日志，零残留">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <nav class="nav">
+    <div class="scan-line"></div>
+    
+    <nav class="navbar">
         <div class="nav-brand">
             <span class="logo">◉</span>
-            <span>SecureDoc</span>
+            <span class="brand-name">SecureDoc</span>
         </div>
         <div class="nav-links">
-            <a href="index.html">工具</a>
+            <a href="index.html">首页</a>
+            <a href="index.html#tools">所有工具</a>
             <a href="privacy.html" class="active">隐私说明</a>
-            <a href="https://github.com/Nick-human0924/securedoc" target="_blank">GitHub</a>
         </div>
     </nav>
 
-    <main class="privacy-content">
+    <main class="privacy-page">
         <h1>隐私说明</h1>
-
-        <div class="privacy-block">
-            <h2>核心原则：零云端 · 零日志 · 零残留</h2>
-            <p>SecureDoc 是一款完全在浏览器本地运行的文档处理工具。你的文件从始至终不会上传到任何服务器。</p>
+        
+        <div class="privacy-content-block">
+            <h2>◉ 核心理念</h2>
+            <p>SecureDoc 的设计初衷是：你的文件，从未离开过你的电脑。</p>
+            <p>我们坚信隐私是基本权利。因此，SecureDoc 采用纯前端架构，所有文档处理都在你的浏览器本地完成，不会上传到任何服务器。</p>
         </div>
 
-        <div class="privacy-block">
-            <h2>数据处理</h2>
+        <div class="privacy-content-block">
+            <h2>◉ 本地处理意味着什么？</h2>
             <ul>
-                <li><strong>本地处理</strong>：所有 PDF 操作（合并、拆分、压缩、涂黑）都在你的浏览器中使用 JavaScript 完成</li>
-                <li><strong>不上传</strong>：文件内容不会发送到我们的服务器或任何第三方服务</li>
-                <li><strong>不存储</strong>：我们不保存任何用户数据、文件信息或处理记录</li>
-                <li><strong>自动清空</strong>：刷新页面或关闭标签后，所有临时数据自动清除</li>
+                <li><strong>不上传服务器</strong> — 文件不会离开你的设备</li>
+                <li><strong>无云端存储</strong> — 我们不保存任何文件副本</li>
+                <li><strong>无需注册</strong> — 不需要账号即可使用全部功能</li>
+                <li><strong>关闭即清空</strong> — 刷新或关闭页面后，所有处理数据自动清除</li>
             </ul>
         </div>
 
-        <div class="privacy-block">
-            <h2>技术实现</h2>
+        <div class="privacy-content-block">
+            <h2>◉ 技术架构</h2>
+            <p>SecureDoc 基于以下技术实现本地处理：</p>
             <ul>
-                <li>使用 <a href="https://pdf-lib.js.org/" target="_blank" style="color: var(--accent)">pdf-lib.js</a> 在浏览器端直接处理 PDF 文件</li>
-                <li>通过 Blob URL 生成本地下载链接，不涉及后端传输</li>
-                <li>纯静态页面部署在 GitHub Pages，无服务器端代码</li>
+                <li><strong>PDF-LIB</strong> — 浏览器端 PDF 处理库</li>
+                <li><strong>PDF.js</strong> — Mozilla 开源 PDF 渲染引擎</li>
+                <li><strong>Blob URL</strong> — 浏览器内存对象引用，非持久化存储</li>
+            </ul>
+            <p>所有代码在你本地执行，你可以随时断开网络使用。</p>
+        </div>
+
+        <div class="privacy-content-block">
+            <h2>◉ 安全建议</h2>
+            <ul>
+                <li>处理完成后及时下载并保存文件</li>
+                <li>关闭页面前确认已保存所有需要的内容</li>
+                <li>敏感文件建议在私人设备上处理</li>
+                <li>定期清理浏览器缓存</li>
             </ul>
         </div>
 
-        <div class="privacy-block">
-            <h2>开源</h2>
-            <p>本项目完全开源，你可以随时查看源代码验证上述声明：</p>
-            <p><a href="https://github.com/Nick-human0924/securedoc" target="_blank" style="color: var(--accent)">github.com/Nick-human0924/securedoc</a></p>
+        <div class="privacy-content-block">
+            <h2>◉ 开源承诺</h2>
+            <p>SecureDoc 代码开源，你可以随时查看实现细节。我们相信透明是信任的基础。</p>
+            <p>GitHub: <a href="https://github.com/Nick-human0924/securedoc" style="color: var(--accent-cyan);">Nick-human0924/securedoc</a></p>
         </div>
 
-        <div class="privacy-block">
-            <h2>最后更新</h2>
-            <p>2026年4月15日</p>
+        <div class="privacy-content-block">
+            <h2>◉ 最后更新</h2>
+            <p>2026年4月15日 — SecureDoc v1.0 发布</p>
         </div>
     </main>
 
     <footer class="footer">
-        <p>© 2026 SecureDoc · 本地隐私文档处理工具</p>
-        <p class="footer-note">All processing happens in your browser. Nothing leaves your device.</p>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo">◉</span>
+                <span>SecureDoc</span>
+            </div>
+            <p class="footer-note">本地隐私文档处理工具 · 文件从未离开你的电脑</p>
+        </div>
     </footer>
 </body>
 </html>
