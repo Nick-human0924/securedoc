@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 拆分 - SecureDoc</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <div class="scan-line"></div>
+    
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">◉</span>
+            <span class="brand-name">SecureDoc</span>
+        </div>
+        <div class="nav-links">
+            <a href="../index.html">首页</a>
+            <a href="../index.html#tools" class="active">所有工具</a>
+            <a href="../privacy.html">隐私说明</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="tool-page">
+            <div class="tool-header">
+                <h1>◊ PDF 拆分</h1>
+                <p>按页码范围拆分 PDF，支持多个区间</p>
+            </div>
+
+            <div class="trust-banner">
+                ◉ 你的文件仅在本地浏览器中处理，不会上传到服务器
+            </div>
+
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon">◊</div>
+                <div class="upload-text">拖拽 PDF 文件到此处，或点击选择文件</div>
+                <div class="upload-hint">支持单个文件，建议不超过 50MB</div>
+                <input type="file" id="fileInput" accept=".pdf" hidden>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div id="optionsArea" style="display: none;">
+                <div class="privacy-content-block">
+                    <h3>拆分方式</h3>
+                    <div style="margin: 1rem 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                            <input type="radio" name="splitMode" value="range" checked>
+                            <span>按页码范围拆分（如：1-3, 5-8, 10-12）</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="splitMode" value="single">
+                            <span>逐页拆分（每页一个文件）</span>
+                        </label>
+                    </div>
+
+                    <div id="rangeInputArea">
+                        <label>页码范围：</label>
+                        <input type="text" id="pageRange" placeholder="例如：1-3, 5-8, 10-12">
+                        <p id="pageInfo" style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;"></p>
+                        
+                        <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                            提示：使用逗号分隔多个范围，用-连接起始和结束页码
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons" id="actionArea" style="display: none;">
+                <button class="btn btn-secondary" onclick="clearFiles()">清空</button>
+                <button class="btn btn-primary" onclick="splitPDF()">开始拆分</button>
+            </div>
+
+            <div class="progress-container" id="progressArea">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">正在处理...</div>
+            </div>
+
+            <div class="result-area" id="resultArea">
+                <h3>◉ 拆分完成！</h3>
+                <p id="resultInfo"></p>
+                <div id="downloadList" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo">◉</span>
+                <span>SecureDoc</span>
+            </div>
+            <p class="footer-note">本地隐私文档处理工具 · 文件从未离开你的电脑</p>
+        </div>
+    </footer>
+
+    <script>
+        let currentFile = null;
+        let pdfDoc = null;
+        let totalPages = 0;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const actionArea = document.getElementById('actionArea');
+        const optionsArea = document.getElementById('optionsArea');
+        const pageInfo = document.getElementById('pageInfo');
+
+        // 点击上传
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // 文件选择
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // 拖拽事件
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        async function handleFiles(fileList) {
+            const pdfFiles = Array.from(fileList).filter(f => f.type === 'application/pdf');
+            if (pdfFiles.length === 0) {
+                alert('请选择 PDF 文件');
+                return;
+            }
+
+            currentFile = pdfFiles[0];
+            
+            // 加载PDF获取页数
+            try {
+                const arrayBuffer = await currentFile.arrayBuffer();
+                pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                totalPages = pdfDoc.getPageCount();
+                pageInfo.textContent = `文档共 ${totalPages} 页`;
+            } catch (error) {
+                alert('无法读取 PDF 文件');
+                return;
+            }
+
+            renderFileList();
+            optionsArea.style.display = 'block';
+            actionArea.style.display = 'flex';
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div class="file-icon">◊</div>
+                <div class="file-info">
+                    <div class="file-name">${currentFile.name}</div>
+                    <div class="file-size">${formatFileSize(currentFile.size)} · ${totalPages} 页</div>
+                </div>
+                <button class="file-remove" onclick="clearFiles()">✕</button>
+            `;
+            fileList.appendChild(fileItem);
+        }
+
+        function clearFiles() {
+            currentFile = null;
+            pdfDoc = null;
+            totalPages = 0;
+            fileList.innerHTML = '';
+            optionsArea.style.display = 'none';
+            actionArea.style.display = 'none';
+            document.getElementById('resultArea').classList.remove('active');
+            document.getElementById('pageRange').value = '';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function splitPDF() {
+            if (!pdfDoc) return;
+
+            const splitMode = document.querySelector('input[name="splitMode"]:checked').value;
+            let ranges = [];
+
+            if (splitMode === 'range') {
+                const rangeInput = document.getElementById('pageRange').value.trim();
+                if (!rangeInput) {
+                    alert('请输入页码范围');
+                    return;
+                }
+                ranges = parsePageRanges(rangeInput, totalPages);
+                if (ranges.length === 0) return;
+            } else {
+                // 逐页拆分
+                for (let i = 0; i < totalPages; i++) {
+                    ranges.push([i, i]);
+                }
+            }
+
+            const progressArea = document.getElementById('progressArea');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressArea.classList.add('active');
+            actionArea.style.display = 'none';
+
+            try {
+                const downloads = [];
+
+                for (let i = 0; i < ranges.length; i++) {
+                    const [start, end] = ranges[i];
+                    progressText.textContent = `正在拆分第 ${i + 1}/${ranges.length} 个文件...`;
+                    progressFill.style.width = `${((i + 0.5) / ranges.length) * 100}%`;
+
+                    // 创建新PDF
+                    const newPdf = await PDFLib.PDFDocument.create();
+                    const pages = await newPdf.copyPages(pdfDoc, 
+                        Array.from({length: end - start + 1}, (_, j) => start + j));
+                    pages.forEach(page => newPdf.addPage(page));
+
+                    const pdfBytes = await newPdf.save();
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const pageRange = start === end ? `第${start + 1}页` : `第${start + 1}-${end + 1}页`;
+                    downloads.push({ url, name: `split_${pageRange}.pdf`, range: pageRange });
+
+                    progressFill.style.width = `${((i + 1) / ranges.length) * 100}%`;
+                }
+
+                // 显示结果
+                document.getElementById('resultInfo').textContent = 
+                    `成功拆分为 ${ranges.length} 个文件`;
+                
+                const downloadList = document.getElementById('downloadList');
+                downloadList.innerHTML = '';
+                
+                downloads.forEach((item) => {
+                    const link = document.createElement('a');
+                    link.href = item.url;
+                    link.download = item.name;
+                    link.className = 'btn btn-primary';
+                    link.style.display = 'inline-block';
+                    link.style.margin = '0.5rem';
+                    link.textContent = `下载 ${item.range}`;
+                    downloadList.appendChild(link);
+                });
+
+                document.getElementById('resultArea').classList.add('active');
+
+            } catch (error) {
+                console.error(error);
+                alert('拆分失败：' + error.message);
+            } finally {
+                progressArea.classList.remove('active');
+                actionArea.style.display = 'flex';
+            }
+        }
+
+        function parsePageRanges(input, maxPages) {
+            const ranges = [];
+            const parts = input.split(',').map(p => p.trim());
+
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                    if (isNaN(start) || isNaN(end)) {
+                        alert(`无效的页码范围：${part}`);
+                        return [];
+                    }
+                    if (start < 1 || end > maxPages || start > end) {
+                        alert(`页码范围 ${part} 超出范围（1-${maxPages}）`);
+                        return [];
+                    }
+                    ranges.push([start - 1, end - 1]); // 转为0索引
+                } else {
+                    const page = parseInt(part);
+                    if (isNaN(page)) {
+                        alert(`无效的页码：${part}`);
+                        return [];
+                    }
+                    if (page < 1 || page > maxPages) {
+                        alert(`页码 ${page} 超出范围（1-${maxPages}）`);
+                        return [];
+                    }
+                    ranges.push([page - 1, page - 1]);
+                }
+            }
+
+            return ranges;
+        }
+    </script>
+</body>
+</html>

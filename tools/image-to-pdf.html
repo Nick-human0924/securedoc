@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片转 PDF - SecureDoc</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">🔒</span>
+            <span class="brand-name">SecureDoc</span>
+        </div>
+        <div class="nav-links">
+            <a href="../index.html">首页</a>
+            <a href="../index.html#tools" class="active">所有工具</a>
+            <a href="../privacy.html">隐私说明</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="tool-page">
+            <div class="tool-header">
+                <h1>🖼️ 图片转 PDF</h1>
+                <p>将多张图片合并为一个 PDF，支持 JPG、PNG、WebP 格式</p>
+            </div>
+
+            <div class="trust-banner">
+                🔐 你的文件仅在本地浏览器中处理，不会上传到服务器
+            </div>
+
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">拖拽图片文件到此处，或点击选择文件</div>
+                <div class="upload-hint">支持 JPG、PNG、WebP 格式，可多选</div>
+                <input type="file" id="fileInput" accept="image/*" multiple hidden>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div id="optionsArea" style="display: none;">
+                <div class="privacy-content-block">
+                    <h3>页面设置</h3>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem;">页面尺寸：</label>
+                        <select id="pageSize" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.375rem;">
+                            <option value="original">保持图片原始尺寸（每页一张）</option>
+                            <option value="A4">A4 (210×297mm)</option>
+                            <option value="A4-fit">A4 自适应（保持比例）</option>
+                            <option value="A5">A5 (148×210mm)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin: 1rem 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="fitToPage" checked>
+                            <span>图片自适应页面（保持比例，避免裁切）</span>
+                        </label>
+                    </div>
+
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem;">图片质量：</label>
+                        <input type="range" id="imageQuality" min="0.5" max="1" step="0.1" value="0.9" style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--text-secondary);">
+                            <span>高压缩</span>
+                            <span id="qualityValue">90%</span>
+                            <span>高质量</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons" id="actionArea" style="display: none;">
+                <button class="btn btn-secondary" onclick="clearFiles()">清空列表</button>
+                <button class="btn btn-primary" onclick="convertToPDF()">开始转换</button>
+            </div>
+
+            <div class="progress-container" id="progressArea">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">正在处理...</div>
+            </div>
+
+            <div class="result-area" id="resultArea">
+                <h3>✅ 转换完成！</h3>
+                <p id="resultInfo"></p>
+                <a class="btn btn-primary" id="downloadLink">下载 PDF</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>SecureDoc - 本地隐私文档处理工具</p>
+        </div>
+    </footer>
+
+    <script>
+        let files = [];
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const actionArea = document.getElementById('actionArea');
+        const optionsArea = document.getElementById('optionsArea');
+
+        // 质量滑块显示
+        document.getElementById('imageQuality').addEventListener('input', (e) => {
+            document.getElementById('qualityValue').textContent = Math.round(e.target.value * 100) + '%';
+        });
+
+        // 点击上传
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // 文件选择
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // 拖拽事件
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(fileList) {
+            const imageFiles = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                alert('请选择图片文件');
+                return;
+            }
+            files = files.concat(imageFiles);
+            renderFileList();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-icon">🖼️</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <div class="file-move">
+                        <button onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>▲</button>
+                        <button onclick="moveFile(${index}, 1)" ${index === files.length - 1 ? 'disabled' : ''}>▼</button>
+                    </div>
+                    <button class="file-remove" onclick="removeFile(${index})">✕</button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+
+            actionArea.style.display = files.length > 0 ? 'flex' : 'none';
+            optionsArea.style.display = files.length > 0 ? 'block' : 'none';
+        }
+
+        function moveFile(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= files.length) return;
+            
+            [files[index], files[newIndex]] = [files[newIndex], files[index]];
+            renderFileList();
+        }
+
+        function removeFile(index) {
+            files.splice(index, 1);
+            renderFileList();
+        }
+
+        function clearFiles() {
+            files = [];
+            renderFileList();
+            document.getElementById('resultArea').classList.remove('active');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function convertToPDF() {
+            if (files.length === 0) {
+                alert('请先选择图片文件');
+                return;
+            }
+
+            const pageSize = document.getElementById('pageSize').value;
+            const fitToPage = document.getElementById('fitToPage').checked;
+            const quality = parseFloat(document.getElementById('imageQuality').value);
+
+            const progressArea = document.getElementById('progressArea');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressArea.classList.add('active');
+            actionArea.style.display = 'none';
+
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.create();
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    progressText.textContent = `正在处理第 ${i + 1}/${files.length} 张图片...`;
+                    progressFill.style.width = `${((i + 0.5) / files.length) * 100}%`;
+
+                    // 读取图片
+                    const imageBytes = await file.arrayBuffer();
+                    let image;
+                    
+                    if (file.type === 'image/png') {
+                        image = await pdfDoc.embedPng(imageBytes);
+                    } else {
+                        image = await pdfDoc.embedJpg(imageBytes);
+                    }
+
+                    const { width: imgWidth, height: imgHeight } = image.size();
+
+                    // 确定页面尺寸
+                    let pageWidth, pageHeight;
+                    
+                    if (pageSize === 'original') {
+                        pageWidth = imgWidth;
+                        pageHeight = imgHeight;
+                    } else if (pageSize === 'A4') {
+                        pageWidth = 595;
+                        pageHeight = 842;
+                    } else if (pageSize === 'A4-fit') {
+                        pageWidth = 595;
+                        pageHeight = 842;
+                    } else if (pageSize === 'A5') {
+                        pageWidth = 420;
+                        pageHeight = 595;
+                    }
+
+                    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+                    // 计算图片绘制尺寸和位置
+                    let drawWidth, drawHeight, x, y;
+                    
+                    if (pageSize === 'original') {
+                        drawWidth = imgWidth;
+                        drawHeight = imgHeight;
+                        x = 0;
+                        y = 0;
+                    } else if (fitToPage) {
+                        // 自适应，保持比例
+                        const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+                        drawWidth = imgWidth * scale;
+                        drawHeight = imgHeight * scale;
+                        x = (pageWidth - drawWidth) / 2;
+                        y = (pageHeight - drawHeight) / 2;
+                    } else {
+                        // 填充整个页面
+                        drawWidth = pageWidth;
+                        drawHeight = pageHeight;
+                        x = 0;
+                        y = 0;
+                    }
+
+                    page.drawImage(image, {
+                        x: x,
+                        y: y,
+                        width: drawWidth,
+                        height: drawHeight
+                    });
+
+                    progressFill.style.width = `${((i + 1) / files.length) * 100}%`;
+                }
+
+                progressText.textContent = '正在生成 PDF...';
+                const pdfBytes = await pdfDoc.save();
+                
+                // 创建下载链接
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = `images_${timestamp}.pdf`;
+
+                // 显示结果
+                document.getElementById('resultInfo').textContent = 
+                    `成功将 ${files.length} 张图片转换为 PDF`;
+                document.getElementById('resultArea').classList.add('active');
+
+            } catch (error) {
+                console.error(error);
+                alert('转换失败：' + error.message);
+            } finally {
+                progressArea.classList.remove('active');
+                actionArea.style.display = files.length > 0 ? 'flex' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>

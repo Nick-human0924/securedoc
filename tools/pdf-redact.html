@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 涂黑 - SecureDoc</title>
+    <meta name="description" content="永久抹除PDF中的敏感信息，本地处理不上传">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand">
+            <span class="logo">◉</span>
+            <span>SecureDoc</span>
+        </div>
+        <div class="nav-links">
+            <a href="../index.html">工具</a>
+            <a href="../privacy.html">隐私说明</a>
+        </div>
+    </nav>
+
+    <main class="tool-page">
+        <div class="tool-header">
+            <h1><span style="color: var(--accent)">▓</span> PDF 涂黑</h1>
+            <p>永久抹除敏感信息，不可恢复。在预览图上框选需要涂黑的区域。</p>
+        </div>
+
+        <div class="trust-banner">
+            🔒 文件仅在浏览器本地处理，关闭页面后所有数据自动清空
+        </div>
+
+        <div class="upload-area" id="dropZone">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">拖拽 PDF 文件到此处，或点击选择文件</div>
+            <div class="upload-hint">仅支持单个 PDF 文件</div>
+            <input type="file" id="fileInput" accept=".pdf" hidden>
+        </div>
+
+        <div id="editorArea" style="display: none;">
+            <div class="redaction-toolbar">
+                <button class="tool-btn active" id="rectTool">▭ 矩形涂黑</button>
+                <button class="tool-btn" id="undoBtn">↩ 撤销</button>
+                <button class="tool-btn" id="clearBtn">✕ 清空</button>
+            </div>
+
+            <div class="pdf-preview" id="pdfPreview"></div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="resetFile()">重新选择</button>
+                <button class="btn btn-primary" onclick="applyRedaction()">确认涂黑</button>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progressArea">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">正在处理...</div>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <h3>✓ 涂黑完成</h3>
+            <p class="result-info" id="resultInfo"></p>
+            <a class="btn btn-primary" id="downloadLink">下载处理后的 PDF</a>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 SecureDoc · 本地隐私文档处理工具</p>
+    </footer>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+        let currentFile = null;
+        let pdfDocument = null;
+        let redactions = []; // [{page, x, y, width, height}]
+        let currentTool = 'rect';
+        let isDrawing = false;
+        let startPos = null;
+        let tempRect = null;
+
+        // UI Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const editorArea = document.getElementById('editorArea');
+        const pdfPreview = document.getElementById('pdfPreview');
+        const rectTool = document.getElementById('rectTool');
+        const undoBtn = document.getElementById('undoBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') handleFile(file);
+        });
+
+        rectTool.addEventListener('click', () => {
+            currentTool = 'rect';
+            rectTool.classList.add('active');
+        });
+
+        undoBtn.addEventListener('click', () => {
+            if (redactions.length > 0) {
+                redactions.pop();
+                renderRedactions();
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            redactions = [];
+            renderRedactions();
+        });
+
+        async function handleFile(file) {
+            if (!file || file.type !== 'application/pdf') {
+                alert('请选择 PDF 文件');
+                return;
+            }
+            
+            currentFile = file;
+            showProgress('正在加载 PDF...', 10);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                showProgress('正在渲染预览...', 50);
+                await renderPDF();
+                
+                dropZone.style.display = 'none';
+                editorArea.style.display = 'block';
+                hideProgress();
+            } catch (error) {
+                console.error(error);
+                alert('加载 PDF 失败: ' + error.message);
+                hideProgress();
+            }
+        }
+
+        async function renderPDF() {
+            pdfPreview.innerHTML = '';
+            
+            for (let i = 1; i <= pdfDocument.numPages; i++) {
+                const page = await pdfDocument.getPage(i);
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale });
+                
+                const container = document.createElement('div');
+                container.className = 'page-container';
+                container.style.width = viewport.width + 'px';
+                container.style.margin = '0 auto 2rem';
+                
+                const label = document.createElement('div');
+                label.className = 'page-label';
+                label.textContent = `第 ${i} 页 / ${pdfDocument.numPages} 页`;
+                container.appendChild(label);
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'page-canvas';
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                canvas.dataset.page = i;
+                container.appendChild(canvas);
+                
+                const overlay = document.createElement('div');
+                overlay.className = 'redaction-overlay';
+                overlay.style.position = 'absolute';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.dataset.page = i;
+                container.appendChild(overlay);
+                
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                
+                // Add drawing events
+                setupDrawing(overlay, i, viewport.scale);
+                
+                pdfPreview.appendChild(container);
+            }
+        }
+
+        function setupDrawing(overlay, pageNum, scale) {
+            let startX, startY;
+            
+            overlay.addEventListener('mousedown', (e) => {
+                if (currentTool !== 'rect') return;
+                isDrawing = true;
+                const rect = overlay.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                
+                tempRect = document.createElement('div');
+                tempRect.style.position = 'absolute';
+                tempRect.style.background = 'rgba(0, 0, 0, 0.8)';
+                tempRect.style.border = '2px dashed var(--accent)';
+                tempRect.style.left = startX + 'px';
+                tempRect.style.top = startY + 'px';
+                overlay.appendChild(tempRect);
+            });
+            
+            overlay.addEventListener('mousemove', (e) => {
+                if (!isDrawing || !tempRect) return;
+                const rect = overlay.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                tempRect.style.width = Math.abs(x - startX) + 'px';
+                tempRect.style.height = Math.abs(y - startY) + 'px';
+                tempRect.style.left = Math.min(x, startX) + 'px';
+                tempRect.style.top = Math.min(y, startY) + 'px';
+            });
+            
+            overlay.addEventListener('mouseup', (e) => {
+                if (!isDrawing || !tempRect) return;
+                isDrawing = false;
+                
+                const width = parseInt(tempRect.style.width);
+                const height = parseInt(tempRect.style.height);
+                
+                if (width > 10 && height > 10) {
+                    const rect = overlay.getBoundingClientRect();
+                    const x = parseInt(tempRect.style.left);
+                    const y = parseInt(tempRect.style.top);
+                    
+                    redactions.push({
+                        page: pageNum,
+                        x: x / scale,
+                        y: y / scale,
+                        width: width / scale,
+                        height: height / scale
+                    });
+                    
+                    tempRect.style.border = 'none';
+                    tempRect.classList.add('redaction-rect');
+                } else {
+                    tempRect.remove();
+                }
+                tempRect = null;
+            });
+        }
+
+        function renderRedactions() {
+            document.querySelectorAll('.redaction-rect').forEach(el => el.remove());
+            
+            redactions.forEach(r => {
+                const overlay = document.querySelector(`.redaction-overlay[data-page="${r.page}"]`);
+                if (overlay) {
+                    const rect = document.createElement('div');
+                    rect.className = 'redaction-rect';
+                    rect.style.position = 'absolute';
+                    rect.style.background = 'rgba(0, 0, 0, 0.9)';
+                    rect.style.left = r.x + 'px';
+                    rect.style.top = r.y + 'px';
+                    rect.style.width = r.width + 'px';
+                    rect.style.height = r.height + 'px';
+                    overlay.appendChild(rect);
+                }
+            });
+        }
+
+        async function applyRedaction() {
+            if (redactions.length === 0) {
+                alert('请先框选需要涂黑的区域');
+                return;
+            }
+
+            showProgress('正在应用涂黑...', 30);
+
+            try {
+                const arrayBuffer = await currentFile.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                const pages = pdfDoc.getPages();
+
+                for (let i = 0; i < redactions.length; i++) {
+                    const r = redactions[i];
+                    const page = pages[r.page - 1];
+                    
+                    showProgress(`正在处理涂黑区域 ${i + 1}/${redactions.length}...`, 
+                        30 + (i / redactions.length) * 60);
+
+                    page.drawRectangle({
+                        x: r.x,
+                        y: page.getHeight() - r.y - r.height,
+                        width: r.width,
+                        height: r.height,
+                        color: PDFLib.rgb(0, 0, 0),
+                        opacity: 1
+                    });
+                }
+
+                showProgress('正在生成文件...', 95);
+                const pdfBytes = await pdfDoc.save();
+                
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = `redacted_${timestamp}.pdf`;
+
+                document.getElementById('resultInfo').textContent = 
+                    `已涂黑 ${redactions.length} 个区域，共 ${pdfDocument.numPages} 页`;
+                document.getElementById('resultArea').classList.add('active');
+                editorArea.style.display = 'none';
+                hideProgress();
+            } catch (error) {
+                console.error(error);
+                alert('涂黑失败: ' + error.message);
+                hideProgress();
+            }
+        }
+
+        function resetFile() {
+            currentFile = null;
+            pdfDocument = null;
+            redactions = [];
+            dropZone.style.display = 'block';
+            editorArea.style.display = 'none';
+            document.getElementById('resultArea').classList.remove('active');
+            fileInput.value = '';
+        }
+
+        function showProgress(text, percent) {
+            const area = document.getElementById('progressArea');
+            const fill = document.getElementById('progressFill');
+            const label = document.getElementById('progressText');
+            area.classList.add('active');
+            fill.style.width = percent + '%';
+            label.textContent = text;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressArea').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

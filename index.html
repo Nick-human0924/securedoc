@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureDoc - 本地隐私文档处理工具</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-brand">
-            <span class="logo">🔒</span>
+            <span class="logo">◉</span>
             <span class="brand-name">SecureDoc</span>
         </div>
         <div class="nav-links">
@@ -22,78 +25,103 @@
     <main>
         <!-- Hero Section -->
         <section class="hero">
+            <div class="scan-line"></div>
             <div class="hero-content">
-                <h1>安全处理你的文档<br><span class="highlight">不上传服务器</span></h1>
-                <p class="hero-subtitle">PDF、Word、PPT 常用工具一站完成<br>核心处理在本地浏览器执行，关闭页面后自动清空</p>
+                <div class="hero-badge">◉ 本地处理 · 零云端</div>
+                <h1>你的文件<br><span class="highlight">从未离开过你的电脑</span></h1>
+                <p class="hero-subtitle">PDF、图片 常用工具一站完成<br>核心处理在本地浏览器执行，关闭页面后自动清空</p>
                 <div class="hero-cta">
                     <a href="#tools" class="btn btn-primary">立即开始</a>
                     <a href="privacy.html" class="btn btn-secondary">了解隐私保护</a>
                 </div>
                 <div class="trust-badges">
-                    <span class="badge">✓ 本地处理</span>
-                    <span class="badge">✓ 文件不上云</span>
-                    <span class="badge">✓ 会话结束自动清空</span>
+                    <span class="badge"><span class="badge-icon">◉</span> 本地处理</span>
+                    <span class="badge"><span class="badge-icon">◉</span> 文件不上云</span>
+                    <span class="badge"><span class="badge-icon">◉</span> 会话结束自动清空</span>
                 </div>
+            </div>
+            <div class="hero-visual">
+                <div class="glow-orb"></div>
             </div>
         </section>
 
         <!-- Tools Section -->
         <section class="tools-section" id="tools">
-            <h2>热门工具</h2>
+            <div class="section-header">
+                <div class="section-tag">TOOLKIT</div>
+                <h2>热门工具</h2>
+                <p class="section-subtitle">所有处理均在浏览器本地完成，无需上传服务器</p>
+            </div>
+            
             <div class="tools-grid">
                 <a href="tools/pdf-merge.html" class="tool-card">
-                    <div class="tool-icon">📑</div>
-                    <h3>PDF 合并</h3>
-                    <p>将多个 PDF 文件合并为一个</p>
+                    <div class="tool-icon">◈</div>
+                    <div class="tool-content">
+                        <h3>PDF 合并</h3>
+                        <p>将多个 PDF 文件合并为一个，支持拖拽调整顺序</p>
+                    </div>
+                    <div class="tool-arrow">→</div>
                 </a>
+                
                 <a href="tools/pdf-split.html" class="tool-card">
-                    <div class="tool-icon">✂️</div>
-                    <h3>PDF 拆分</h3>
-                    <p>按页码范围拆分 PDF</p>
+                    <div class="tool-icon">◊</div>
+                    <div class="tool-content">
+                        <h3>PDF 拆分</h3>
+                        <p>按页码范围拆分 PDF，支持多个区间和逐页拆分</p>
+                    </div>
+                    <div class="tool-arrow">→</div>
                 </a>
+                
                 <a href="tools/pdf-compress.html" class="tool-card">
-                    <div class="tool-icon">🗜️</div>
-                    <h3>PDF 压缩</h3>
-                    <p>减小 PDF 文件体积</p>
+                    <div class="tool-icon">◎</div>
+                    <div class="tool-content">
+                        <h3>PDF 压缩</h3>
+                        <p>减小 PDF 文件体积，三级压缩质量可选</p>
+                    </div>
+                    <div class="tool-arrow">→</div>
                 </a>
+                
                 <a href="tools/pdf-redact.html" class="tool-card">
-                    <div class="tool-icon">🖍️</div>
-                    <h3>PDF 涂黑</h3>
-                    <p>永久删除敏感信息</p>
+                    <div class="tool-icon">▓</div>
+                    <div class="tool-content">
+                        <h3>PDF 涂黑</h3>
+                        <p>可视化涂黑敏感信息，永久删除原始内容</p>
+                    </div>
+                    <div class="tool-arrow">→</div>
                 </a>
-                <a href="tools/word-to-pdf.html" class="tool-card">
-                    <div class="tool-icon">📄</div>
-                    <h3>Word 转 PDF</h3>
-                    <p>将 Word 文档转为 PDF</p>
-                </a>
+                
                 <a href="tools/image-to-pdf.html" class="tool-card">
-                    <div class="tool-icon">🖼️</div>
-                    <h3>图片转 PDF</h3>
-                    <p>将图片合并为 PDF</p>
+                    <div class="tool-icon">◉</div>
+                    <div class="tool-content">
+                        <h3>图片转 PDF</h3>
+                        <p>将多张图片合并为 PDF，支持多种页面尺寸</p>
+                    </div>
+                    <div class="tool-arrow">→</div>
                 </a>
             </div>
         </section>
 
-        <!-- Local Processing Info -->
+        <!-- Privacy Info Section -->
         <section class="privacy-section">
-            <div class="privacy-content">
+            <div class="section-header">
+                <div class="section-tag">SECURITY</div>
                 <h2>为什么选本地处理？</h2>
-                <div class="privacy-features">
-                    <div class="feature">
-                        <div class="feature-icon">🔐</div>
-                        <h3>隐私安全</h3>
-                        <p>文档内容不上传服务器，避免数据泄露风险</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">⚡</div>
-                        <h3>即开即用</h3>
-                        <p>无需注册登录，打开网页就能用</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🧹</div>
-                        <h3>不留痕迹</h3>
-                        <p>关闭页面后自动清空所有处理内容</p>
-                    </div>
+            </div>
+            <div class="privacy-features">
+                <div class="feature">
+                    <div class="feature-icon">◉</div>
+                    <h3>隐私安全</h3>
+                    <p>文档内容不上传服务器，避免数据泄露风险</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">◉</div>
+                    <h3>即开即用</h3>
+                    <p>无需注册登录，打开网页就能用，无使用限制</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">◉</div>
+                    <h3>不留痕迹</h3>
+                    <p>关闭页面后自动清空所有处理内容，可放心处理敏感文件</p>
                 </div>
             </div>
         </section>
@@ -101,8 +129,11 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <p>SecureDoc - 本地隐私文档处理工具</p>
-            <p class="footer-note">所有文档处理均在您的浏览器本地完成</p>
+            <div class="footer-brand">
+                <span class="logo">◉</span>
+                <span>SecureDoc</span>
+            </div>
+            <p class="footer-note">本地隐私文档处理工具 · 文件从未离开你的电脑</p>
         </div>
     </footer>
 
